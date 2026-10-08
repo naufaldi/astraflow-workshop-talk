@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.netlify/
+exports/
+*.pdf
+contact-sheet.jpg
+.env
+.env.*
+.dev.vars
+.dev.vars.*
+.DS_Store
+*.log

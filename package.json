@@ -1,0 +1,20 @@
+{
+  "name": "astraflow-workshop",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "slidev --open",
+    "build": "slidev build",
+    "export": "slidev export --output slides-export.pdf",
+    "export:png": "slidev export --format png --output exports/slide"
+  },
+  "dependencies": {
+    "@slidev/cli": "^53.0.0",
+    "@slidev/theme-default": "latest",
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "playwright-chromium": "^1.50.0",
+    "qrcode": "^1.5.4"
+  }
+}

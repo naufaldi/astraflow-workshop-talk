@@ -1,0 +1,185 @@
+/*
+  AstraFlow / UCLOUD light theme.
+  Palette pulled from the live sites on 2026-10-08:
+  - #4F3CD8  --color-primary in astraflow.ucloud-global.com CSS
+  - #4F39F6 / #4231B9 / #EFEEFF  accent, pressed and tint used in the AstraFlow page markup
+  - #4245F8  indigo sampled from the AstraFlow star mark, #CCECDD the mint end of its gradient
+  - #3860F4  fill of the UCLOUD wordmark SVG on ucloud-global.com
+  - #0F172A / #475569 / #64748B / #E2E8F0 / #F8FAFC  slate ink, muted and surfaces from the AstraFlow CSS
+  - #047857 / #B91C1C  success and error tones from the AstraFlow CSS
+  Typography: the AstraFlow site uses a plain system sans stack, so Inter stands in here.
+*/
+:root {
+  --af-primary: #4f3cd8;
+  --af-primary-bright: #4f39f6;
+  --af-primary-dark: #4231b9;
+  --af-tint: #efeeff;
+  --af-tint-2: #d4ceff;
+  --af-star: #4245f8;
+  --af-mint: #ccecdd;
+  --af-blue: #3860f4;
+  --af-ink: #0f172a;
+  --af-ink-2: #334155;
+  --af-muted: #64748b;
+  --af-line: #e2e8f0;
+  --af-surface: #f8fafc;
+  --af-ok: #047857;
+  --af-bad: #b91c1c;
+  --slidev-theme-primary: #4f3cd8;
+}
+
+.slidev-layout {
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--af-ink);
+  background: #ffffff;
+  padding: 2.2rem 3rem 2.6rem;
+  font-size: 1.05rem;
+  line-height: 1.45;
+}
+.slidev-layout h1 {
+  font-weight: 750;
+  font-size: 2.05rem;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  color: var(--af-ink);
+  margin-bottom: 0.9rem;
+}
+.slidev-layout h1 + p { opacity: 1; }
+.slidev-layout h2 { font-weight: 700; font-size: 1.35rem; letter-spacing: -0.015em; color: var(--af-ink); }
+.slidev-layout h3 { font-weight: 700; font-size: 1rem; color: var(--af-primary); text-transform: none; opacity: 1; }
+.slidev-layout :where(h3) { margin: 0.2rem 0 0.35rem; }
+.slidev-layout :where(p) { margin: 0.35rem 0; }
+.slidev-layout strong { color: var(--af-primary-dark); font-weight: 700; }
+.slidev-layout a { color: var(--af-primary); border-bottom: 1px dashed var(--af-tint-2); }
+.slidev-layout ul { margin: 0.3rem 0; }
+.slidev-layout li { margin: 0.18rem 0; padding-left: 0.1rem; }
+.slidev-layout ul li::marker { color: var(--af-primary); }
+
+/* inline code */
+.slidev-layout :not(pre) > code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.86em;
+  background: var(--af-tint);
+  color: var(--af-primary-dark);
+  padding: 0.08em 0.36em;
+  border-radius: 5px;
+  font-weight: 500;
+}
+
+/* code blocks */
+.slidev-code-wrapper, .slidev-layout pre.shiki { margin: 0.35rem 0; }
+.slidev-layout pre.shiki, .slidev-code {
+  background: var(--af-surface) !important;
+  border: 1px solid var(--af-line);
+  border-radius: 10px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.74rem !important;
+  line-height: 1.5 !important;
+  padding: 0.7rem 0.9rem !important;
+}
+.slidev-code .highlighted, .slidev-layout .shiki .line.highlighted { background: transparent; }
+.slidev-code-wrapper .slidev-code-copy { display: none; }
+.code-bug pre.shiki { border-left: 4px solid var(--af-bad); }
+.code-fix pre.shiki { border-left: 4px solid var(--af-ok); }
+.code-tag { font-family: 'JetBrains Mono', monospace; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin: 0.4rem 0 0.1rem; }
+.code-tag.bug { color: var(--af-bad); }
+.code-tag.fix { color: var(--af-ok); }
+.code-tag.neutral { color: var(--af-muted); }
+
+/* eyebrow */
+.af-eyebrow {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; font-weight: 600;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--af-primary);
+  margin-bottom: 0.55rem;
+}
+.af-eyebrow-dot { width: 8px; height: 8px; border-radius: 2px; background: linear-gradient(135deg, var(--af-star), var(--af-mint)); }
+
+.lede { font-size: 1.25rem; line-height: 1.4; color: var(--af-ink-2); }
+.muted { color: var(--af-muted); }
+.small { font-size: 0.85rem; }
+.tiny { font-size: 0.72rem; }
+.brand { color: var(--af-primary); }
+
+/* cards */
+.card { background: #fff; border: 1px solid var(--af-line); border-radius: 14px; padding: 0.85rem 1rem; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04); }
+.card.tint { background: var(--af-tint); border-color: var(--af-tint-2); }
+.card.surface { background: var(--af-surface); }
+.card h3 { margin-top: 0; }
+.pill { display: inline-block; font-size: 0.7rem; font-weight: 600; padding: 0.15rem 0.55rem; border-radius: 999px; background: var(--af-tint); color: var(--af-primary-dark); }
+.pill.ok { background: #ecfdf5; color: var(--af-ok); }
+.pill.bad { background: #fef2f2; color: var(--af-bad); }
+.pill.blue { background: #eef2ff; color: var(--af-blue); }
+
+/* bug slides */
+.bug-grid { display: grid; grid-template-columns: 0.82fr 1.18fr; gap: 1.3rem; align-items: start; }
+.bug-side .row { display: flex; gap: 0.6rem; align-items: baseline; margin: 0.45rem 0; }
+.bug-side .k { flex: 0 0 4.6rem; font-family: 'JetBrains Mono', monospace; font-size: 0.64rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding-top: 0.2rem; }
+.bug-side .k.sym { color: var(--af-bad); }
+.bug-side .k.hint { color: #b45309; }
+.bug-side .k.fix { color: var(--af-ok); }
+.bug-side .v { font-size: 0.95rem; line-height: 1.38; }
+.bug-num { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--af-bad); }
+
+/* steps */
+.af-step { display: flex; gap: 0.75rem; align-items: flex-start; margin: 0.42rem 0; }
+.af-step-n { flex: 0 0 1.65rem; height: 1.65rem; border-radius: 8px; display: grid; place-items: center; font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; font-weight: 700; color: #fff; background: var(--af-primary); }
+.af-step--blue .af-step-n { background: var(--af-blue); }
+.af-step--ok .af-step-n { background: var(--af-ok); }
+.af-step--warn .af-step-n { background: #b45309; }
+.af-step-body { font-size: 0.95rem; line-height: 1.38; padding-top: 0.12rem; }
+
+/* QR */
+.af-qr { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.af-qr img { border-radius: 12px; border: 1px solid var(--af-line); padding: 6px; background: #fff; }
+.af-qr-label { margin-top: 0.45rem; font-weight: 700; font-size: 0.95rem; }
+.af-qr-url { font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: var(--af-muted); }
+
+/* footer */
+.af-footer { position: absolute; left: 3rem; right: 3rem; bottom: 0.85rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.62rem; color: var(--af-muted); }
+.af-footer-logo { height: 15px; }
+.af-footer-ucloud { height: 9px; }
+.af-footer-x { font-size: 0.6rem; }
+.af-footer-sep { width: 1px; height: 10px; background: var(--af-line); margin: 0 0.3rem; }
+.af-footer-page { margin-left: auto; font-family: 'JetBrains Mono', monospace; }
+
+/* cover */
+.slidev-layout.cover { background: #fff url('/brand/astraflow-hero.jpg') center bottom / cover no-repeat; color: var(--af-ink); text-align: left; }
+.slidev-layout.cover h1 { font-size: 2.65rem; line-height: 1.08; max-width: 34rem; margin-bottom: 0.8rem; }
+.slidev-layout.end { background: #fff url('/brand/astraflow-hero.jpg') center bottom / cover no-repeat; }
+
+/* section strip */
+.sec { display: inline-block; font-size: 0.68rem; font-weight: 700; color: var(--af-muted); letter-spacing: 0.08em; text-transform: uppercase; }
+
+.flow { display: flex; align-items: stretch; gap: 0.5rem; }
+.flow .node { flex: 1; border: 1px solid var(--af-line); border-radius: 12px; padding: 0.7rem 0.75rem; background: #fff; }
+.flow .node.hl { background: var(--af-tint); border-color: var(--af-tint-2); }
+.flow .node .t { font-weight: 700; font-size: 0.95rem; }
+.flow .node .d { font-size: 0.78rem; color: var(--af-muted); margin-top: 0.25rem; line-height: 1.35; }
+.flow .arrow { align-self: center; color: var(--af-primary); font-weight: 700; }
+
+table { font-size: 0.85rem; }
+.slidev-layout table th { color: var(--af-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.slidev-layout table td, .slidev-layout table th { padding: 0.35rem 0.6rem; border-bottom: 1px solid var(--af-line); }
+
+.mermaid { display: flex; justify-content: center; }
+.slidev-vclick-hidden { }
+
+/* --- review fixes --- */
+.grid > *, .bug-grid > *, .flex > * { min-width: 0; }
+.slidev-layout pre, .slidev-layout code, .slidev-code, .slidev-code * {
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
+}
+.slidev-code .line.dishonored, .slidev-layout .shiki .dishonored { opacity: 0.5 !important; }
+.bug-grid { grid-template-columns: 0.74fr 1.26fr; gap: 1.2rem; }
+.bug-grid pre.shiki, .bug-grid .slidev-code { font-size: 0.7rem !important; }
+
+/* placeholder marker for links/QRs that still need the real starter repo */
+.ph-note { display: inline-block; margin-top: 0.6rem; font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 600; color: #b45309; background: #fffbeb; border: 1px dashed #f59e0b; border-radius: 6px; padding: 0.15rem 0.5rem; }
+
+/* section opener slides */
+.slidev-layout.section-slide { background: linear-gradient(120deg, #ffffff 0%, #ffffff 55%, var(--af-tint) 100%); }
+.slidev-layout.section-slide h1 { font-size: 2.6rem; margin-top: 2.2rem; }
+.slidev-layout.section-slide .af-step-body { font-size: 1.25rem; }
+.slidev-layout.section-slide .af-step-n { flex-basis: 2rem; height: 2rem; font-size: 0.9rem; }
