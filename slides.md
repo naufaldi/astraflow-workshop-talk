@@ -113,7 +113,7 @@ No CV dump. The app is the star today.
 <tbody>
 <tr v-click><td class="t">10 min</td><td><b>Opening</b><br/><span class="muted small">why build this, what you leave with</span></td></tr>
 <tr v-click><td class="t">20 min</td><td><b>The product</b><br/><span class="muted small">the case, the flow, MCP, AstraFlow</span></td></tr>
-<tr v-click><td class="t">10 min</td><td><b>Setup</b><br/><span class="muted small">clone, <code>.dev.vars</code>, D1, <code>wrangler dev</code></span></td></tr>
+<tr v-click><td class="t">10 min</td><td><b>Setup</b><br/><span class="muted small">clone, <code>.dev.vars</code>, <code>db:migrate:local</code>, <code>npm run dev</code></span></td></tr>
 <tr v-click><td class="t">55 min</td><td><b>Fix it together</b><br/><span class="muted small">solid, priceable, trustworthy</span></td></tr>
 <tr v-click><td class="t">25 min</td><td><b>Wrap</b><br/><span class="muted small">is your idea worth building? Q&amp;A</span></td></tr>
 </tbody>
@@ -309,7 +309,6 @@ Credits and the key are for the lab. The AstraFlow team is in the room for quest
 
 <div class="grid grid-cols-2 gap-6 mt-4">
 <div class="card flex gap-5 items-center" v-click>
-  <!-- TODO: swap in the real starter repo URL and regenerate this QR (public/qr/*.png) -->
   <Qr src="/qr/monitor-pangan.png" label="Monitor Pangan" url="monitor.naufaldi.com" :size="168" />
   <div>
     <h3>The data source</h3>
@@ -319,7 +318,6 @@ Credits and the key are for the lab. The AstraFlow team is in the room for quest
   </div>
 </div>
 <div class="card flex gap-5 items-center" v-click>
-  <!-- TODO: swap in the real starter repo URL and regenerate this QR (public/qr/*.png) -->
   <Qr src="/qr/cs-ai.png" label="CS AI helper" url="monitor-pangan-support…workers.dev" :size="168" />
   <div>
     <h3>The support chat</h3>
@@ -330,9 +328,9 @@ Credits and the key are for the lab. The AstraFlow team is in the room for quest
 </div>
 </div>
 
-<div class="ph-note">QR / link placeholder, real repo link coming</div>
+<p class="small muted mt-3">The starter code for today is on GitHub: <code>naufaldi/astra-cs</code>, branch <code>workshop-broken</code>.</p>
 
-<p class="mt-4 lede" v-click>Today we take the second one apart.<br/>Then we put it back together, working.</p>
+<p class="mt-3 lede" v-click>Today we take the second one apart.<br/>Then we put it back together, working.</p>
 
 <!--
 Ask people to scan both QR codes now.
@@ -340,8 +338,6 @@ Ask people to scan both QR codes now.
 Monitor Pangan is the data. The CS AI helper is the product we work on today.
 
 Try asking the helper "harga cabai rawit di Jawa Barat?" and watch it answer with a trading date.
-
-TODO before the event: swap in the real starter repo URL and regenerate the QR codes.
 -->
 
 ---
@@ -413,7 +409,7 @@ Human review is not optional for enterprise. If a customer says the price is wro
 
 # How it all talks to each other
 
-```mermaid {scale: 1}
+```mermaid {scale: 0.9}
 flowchart LR
   B["Browser<br/>web/draft.js"] -->|"POST /chat"| W
   X["Other MCP clients"] -.->|"public /mcp"| S
@@ -421,7 +417,7 @@ flowchart LR
   subgraph CF["CS AI Worker on Cloudflare"]
     W["handleChat + resolve.ts<br/>code picks commodity, date"]
     W -->|"MCP client<br/>StreamableHTTP"| S["MCP server<br/>baca_tabel_harga"]
-    W --> P["phrase.ts<br/>facts in, one sentence out"]
+    W --> P["phrase.ts<br/>facts in, one checked sentence<br/>or the template"]
     W <--> D[("D1<br/>credits, usage, handoff")]
   end
   S -->|"GET /api/pihps/fresh"| M["Monitor Pangan<br/>TanStack Start, D1/R2"]
@@ -441,6 +437,8 @@ Inside the Worker, MCP is called by our own code. The same MCP server is also pu
 
 AstraFlow is the purple box. One call, at the end.
 
+Then code checks the sentence. If the model dropped the price or the date, or AstraFlow failed or timed out, the template writes the answer instead. That's ADR 0014 in the starter.
+
 D1 holds three things: credits, usage, and handoffs.
 -->
 
@@ -457,19 +455,22 @@ D1 holds three things: credits, usage, and handoffs.
 <Step n="3" v-click tone="blue">Worker calls the MCP tool <code>baca_tabel_harga</code>.</Step>
 <Step n="4" v-click tone="blue">The tool fetches <code>/api/pihps/fresh</code> from Monitor Pangan. Falls back to cache.</Step>
 <Step n="5" v-click tone="warn">Credit check. Not enough? HTTP <code>402</code>, no model call.</Step>
-<Step n="6" v-click>AstraFlow phrases the facts into <b>one sentence</b> and returns <code>usage</code>.</Step>
-<Step n="7" v-click tone="ok">Worker adds the source line, charges credits, logs usage.</Step>
+<Step n="6" v-click>AstraFlow phrases the facts into <b>one sentence</b>. Code checks it kept the price and date. Failed or wrong? The template answers.</Step>
+<Step n="7" v-click tone="ok">Worker adds the source line, charges only if the model ran, logs usage.</Step>
 </div>
 <div v-click>
 <div class="code-tag neutral">what the browser gets back</div>
 
 ```jsonc
 {
-  "reply": "On trading date 2026-10-07, ... per kg. Source: ...",
-  "draft": { "commodity": "...", "tradingDate": "2026-10-07" },
-  "outcome": "answered" // or "handoff", "refusal", "402"
+  "reply": "On trading date 2026-10-05, ...",
+  "draft": { "tradingDate": "2026-10-05", ... },
+  "outcome": "answered",
+  "wording": "astra"
 }
 ```
+
+<p class="small muted mt-2"><code>outcome</code> can also be handoff, refusal, unread, or 402.<br/><code>wording</code> can also be rejected, fallback, or none.</p>
 
 <p class="small muted mt-2">Price complaints skip the model completely. Code writes a handoff row and replies.</p>
 </div>
@@ -482,7 +483,7 @@ Point at hop 2. Code decides. The model has not been called yet.
 
 Hop 5 is money. No credits, no model call, HTTP 402.
 
-Hop 6 is the only place AstraFlow appears. One sentence.
+Hop 6 is the only place AstraFlow appears. One sentence, and code still checks it.
 
 The reply shape on the right is what web/draft.js reads.
 -->
@@ -560,29 +561,30 @@ Why MCP and not a normal function then? The same tool is public at /mcp, so othe
 
 </div>
 <div>
-<div class="code-tag neutral">a real request</div>
+<div class="code-tag neutral">the request the starter sends</div>
 
-```bash {1|2|4|5-8|all}
+```bash {1|2|5|6-9|10-11|all}
 curl https://api-sg.umodelverse.ai/v1/chat/completions \
   -H "Authorization: Bearer $ASTRAFLOW_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "deepseek-v4.1-flash",
     "messages": [
-      { "role": "system", "content": "Write one English sentence ..." },
-      { "role": "user", "content": "{\"komoditas\":\"Cabai Rawit\", ...}" }
+      { "role": "system", "content": "Write one sentence in English ..." },
+      { "role": "user", "content": "{\"komoditas\":\"Beras\", ...}" }
     ],
-    "stream": false
+    "stream": false, "thinking": { "type": "disabled" },
+    "user": "acme"
   }'
 ```
 
 <div class="code-tag neutral">the part we care about in the response</div>
 
 ```jsonc
-"choices": [{ "message": { "content": "On trading date 2026-10-07, ..." } }],
+"choices": [{ "message": { "content": "On trading date 2026-10-05, ..." } }],
 "usage": {
-  "prompt_tokens": 180, "completion_tokens": 60, "total_tokens": 240
-} // example numbers
+  "prompt_tokens": 105, "completion_tokens": 31, "total_tokens": 136
+} // about one real answer, from the starter README
 ```
 
 </div>
@@ -591,9 +593,13 @@ curl https://api-sg.umodelverse.ai/v1/chat/completions \
 <!--
 AstraFlow is UCLOUD's model gateway. OpenAI-compatible.
 
-Click through the highlights: endpoint, key header, model, messages.
+Click through the highlights: endpoint, key header, model, messages, then the two extra fields.
 
-The usage block at the bottom matters a lot later. That's how we count tokens and charge credits. The numbers here are example numbers.
+thinking disabled keeps one answer around 135 tokens. Set ASTRAFLOW_THINKING=on and the model reasons first, which costs hundreds more tokens and a few seconds.
+
+user is the tenant id, so calls can be filtered per tenant on the gateway side.
+
+The usage block matters a lot later. That's how we count tokens and charge credits.
 -->
 
 ---
@@ -602,26 +608,29 @@ The usage block at the bottom matters a lot later. That's how we count tokens an
 
 # Get it running locally
 
-<div class="grid grid-cols-[1.25fr_1fr] gap-6 mt-2">
+<div class="grid grid-cols-[1.3fr_1fr] gap-6 mt-1">
 <div>
 
 ```bash
-# 1. get the starter (link is in the chat)
-git clone <starter-repo-url> astra-cs && cd astra-cs
-npm install
+# 1. the starter, broken on purpose (Node 22.13+)
+git clone -b workshop-broken \
+  https://github.com/naufaldi/astra-cs.git astra-cs-unfinish
+cd astra-cs-unfinish && npm install
 
-# 2. local secrets
+# 2. local secrets, git ignores this file
 cp .dev.vars.example .dev.vars
 
-# 3. local D1 database
-npx wrangler d1 migrations apply monitor-pangan-handoff --local
-
-# 4. run it
-npx wrangler dev        # http://localhost:8787
+# 3. local D1 database, then run it
+npm run db:migrate:local
+npm run dev             # http://localhost:8787
 ```
 
-<!-- TODO: replace <starter-repo-url> with the real starter repo URL -->
-<div class="ph-note">QR / link placeholder, real repo link coming</div>
+<div class="code-tag neutral">stuck? the finished reference</div>
+
+```bash
+git clone -b main \
+  https://github.com/naufaldi/astra-cs.git astra-cs-finish
+```
 
 </div>
 <div>
@@ -629,17 +638,16 @@ npx wrangler dev        # http://localhost:8787
 
 ```ini
 ASTRAFLOW_API_KEY=   # workshop key, from today
-# Optional. Blank means deepseek-v4.1-flash.
+# Blank means deepseek-v4.1-flash.
 ASTRAFLOW_MODEL=
+# on = the model reasons, about 5x the tokens
+ASTRAFLOW_THINKING=
 WORKSHOP_KEY=
 ```
 
-<div class="card surface mt-3 small" v-click>
-
-The migration seeds a `demo` tenant with **50 credits**.
-
-`.dev.vars` is already in `.gitignore`. Keep it that way.
-
+<div class="flex gap-4 items-center mt-3">
+<Qr src="/qr/starter.png" label="Starter repo" url="naufaldi/astra-cs" :size="104" />
+<div class="small muted" v-click>The migration seeds a <code>demo</code> tenant with <b>50 credits</b>.<br/><code>/admin</code> locally is <code>admin</code> / <code>admin</code>.</div>
 </div>
 </div>
 </div>
@@ -647,11 +655,15 @@ The migration seeds a `demo` tenant with **50 credits**.
 <!--
 Give people time here. Watch the chat.
 
-Common problems: old Node version, wrangler login prompt. Local dev doesn't need a Cloudflare login for D1 --local.
+The QR opens the workshop-broken branch on GitHub.
 
-Once wrangler dev is up, open localhost:8787 and send one question.
+db:migrate:local only touches the local database under .wrangler. No Cloudflare login needed for that.
 
-TODO before the event: swap in the real starter repo URL in the clone command (and the QR codes).
+Common problem: an old Node. Tests use node:sqlite, so Node 22.13 or newer.
+
+Once npm run dev is up, open localhost:8787 and ask one price question.
+
+Don't deploy today. Everything runs locally.
 -->
 
 ---
@@ -660,12 +672,12 @@ TODO before the event: swap in the real starter repo URL in the clone command (a
 
 # Some parts are broken on purpose.
 
-<div class="grid grid-cols-[1fr_1fr] gap-7 mt-2">
+<div class="grid grid-cols-[0.8fr_1.2fr] gap-7 mt-2">
 <div>
 
 ```bash
-npm test                # the app's own tests
-npm run test:exercise   # starts red. That's fine.
+npm test               # 15 of 105 start red
+npm run test:exercise  # 2 of 2 start red
 ```
 
 <p class="lede mt-6">Red means there's work to do.<br/>Green means you fixed it.</p>
@@ -677,14 +689,12 @@ npm run test:exercise   # starts red. That's fine.
 
 | # | What's broken | Where to look |
 |---|---|---|
-| 1 | first AstraFlow call | `src/agent/phrase.ts` |
-| 2 | key in the browser | `web/draft.js` |
-| 3 | model id | `phrase.ts`, `.dev.vars` |
-| 4 | token usage | `src/workshop/token-usage.ts` |
-| 5 | cost math | `token-usage.ts` |
-| 6 | credit gate | `src/workshop/charge-credits.ts` |
-| 7 | upstream errors | `phrase.ts`, `handle-request.ts` |
-| 8 | grounding, handoff | `phrase.ts`, `handle-request.ts` |
+| 1 | cost math | `src/workshop/token-usage.ts`<br/>`src/workshop/cost-projection.ts` |
+| 2 | AstraFlow has a bad minute | `src/agent/phrase.ts`<br/>`src/agent/handle-request.ts` |
+| 3 | the model sees the raw message | `src/agent/phrase.ts` |
+| + | your own guardrail | `src/agent/extra-guardrail.ts` |
+
+<p class="small muted mt-2">The first request, usage, the credit gate and the handoff ship working. We read them, not fix them.</p>
 
 </div>
 </div>
@@ -692,205 +702,86 @@ npm run test:exercise   # starts red. That's fine.
 <!--
 Run both commands now.
 
-npm run test:exercise is supposed to fail at the start. Say it twice.
+The red counts are what I see on a fresh clone of workshop-broken.
 
-This table is the map for the next 55 minutes.
+Three bugs, plus one open exercise. That's the map for the next 55 minutes.
+
+The rest of the app works. We still walk through it, because you need to know what a working first call and a working credit gate look like.
 -->
 
 ---
 class: section-slide
 ---
 
-<Eyebrow>Fix it together · Part 1</Eyebrow>
+<Eyebrow>Fix it together · Part 1 · 10 min</Eyebrow>
 
 # Make the first request solid.
 
 <p class="lede mt-2">If the first request isn't solid, nothing else matters.</p>
 
 <div class="mt-6" style="max-width:36rem">
-<Step n="1" v-click>the endpoint</Step>
-<Step n="2" v-click>the key</Step>
-<Step n="3" v-click>the model id</Step>
+<Step n="1" v-click>the right endpoint</Step>
+<Step n="2" v-click>the key on the server</Step>
+<Step n="3" v-click>a model id that exists</Step>
 </div>
 
 <!--
-Three bugs, all about the first call. Wrong URL, leaked key, wrong model.
+No bug to fix here. This part ships working.
 
-About 15 minutes for this part.
+Put your workshop key in .dev.vars, restart npm run dev, ask one question. That's your first AstraFlow request.
+
+Then we read the code that makes it work, so you can check the same three things in your own project.
 -->
 
 ---
 
-<Eyebrow>Fix it together · <span class="bug-num">Bug 1</span></Eyebrow>
+<Eyebrow>Part 1 · read it</Eyebrow>
 
-# The first request to AstraFlow fails
+# Three things every first call gets right
 
-<div class="bug-grid">
-<div class="bug-side">
-  <div class="row"><span class="k sym">Symptom</span><span class="v">Every customer gets "The price answer could not be written." Support is still overwhelmed.</span></div>
-  <div class="row" v-click><span class="k hint">Hint</span><span class="v">Look at the URL. Chat model, or the old text completion API?</span></div>
-  <div class="row" v-click><span class="k fix">Fix</span><span class="v">Chat models live at <code>/v1/chat/completions</code>.</span></div>
-  <p class="small muted mt-4" v-after>Check the Worker log. The upstream error class is kept, the key is redacted.</p>
+<div class="grid grid-cols-[0.8fr_1.2fr] gap-6 mt-1">
+<div>
+<Step n="1" v-click>Chat models live at <code>/v1/chat/completions</code>. Not the old <code>/v1/completions</code>.</Step>
+<Step n="2" v-click>The browser only calls <code>/chat</code>. The Worker reads the key from <code>env</code>. DevTools shows no key.</Step>
+<Step n="3" v-click>The model id is config. A wrong id gets HTTP <code>400</code> with <code>param_error</code>.</Step>
+<div class="card tint small mt-3" v-click>Try it. Set <code>ASTRAFLOW_MODEL=nope</code>, restart, ask again. What does the customer see?</div>
 </div>
 <div>
-<div class="code-tag bug">buggy · src/agent/phrase.ts</div>
-<div class="code-bug">
+<div class="code-tag neutral">src/agent/phrase.ts</div>
 
-```ts {2}
-response = await fetchImpl(
-  "https://api-sg.umodelverse.ai/v1/completions",
-  { method: "POST", headers, body },
-);
-```
-
-</div>
-<div v-click="2">
-<div class="code-tag fix">fixed</div>
-<div class="code-fix">
-
-```ts {2}
+```ts {2|5|7|all}
 response = await fetchImpl(
   "https://api-sg.umodelverse.ai/v1/chat/completions",
   {
     method: "POST",
-    headers: {
-      authorization: `Bearer ${options.apiKey}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({ model, messages, stream: false }),
+    headers: { authorization: `Bearer ${options.apiKey}` },
+    body: JSON.stringify({
+      model: resolvedModel(options.model), // blank = v4.1-flash
+      messages: payload.messages,
+      stream: false,
+    }),
   },
 );
 ```
 
-</div>
-</div>
-</div>
-</div>
-
-<!--
-Give people 5 minutes before you click.
-
-"Why does it fail? Look at the path."
-
-/v1/completions is the old text API. Chat models want /v1/chat/completions.
-
-Show the Worker log after the fix. One answered line.
--->
-
----
-
-<Eyebrow>Fix it together · <span class="bug-num">Bug 2</span></Eyebrow>
-
-# The API key leaks to the browser
-
-<div class="bug-grid">
-<div class="bug-side">
-  <div class="row"><span class="k sym">Symptom</span><span class="v">Anyone who opens DevTools can copy your AstraFlow key. Your credits become their credits.</span></div>
-  <div class="row" v-click><span class="k hint">Hint</span><span class="v">Who should call AstraFlow? The browser or the Worker?</span></div>
-  <div class="row" v-click><span class="k fix">Fix</span><span class="v">The browser only talks to <code>/chat</code>. The Worker reads the key from a secret.</span></div>
-  <div class="card tint small mt-4" v-after>Try it. Network tab, look at the request headers.</div>
-</div>
-<div>
-<div class="code-tag bug">buggy · web/draft.js (runs in the browser)</div>
-<div class="code-bug">
-
-```js {3}
-const url = "https://api-sg.umodelverse.ai/v1/chat/completions";
-await fetch(url, {
-  headers: { authorization: "Bearer sk-workshop-..." },
-  body: JSON.stringify({ model, messages }),
-});
-```
-
-</div>
-<div v-click="2">
-<div class="code-tag fix">fixed · browser → Worker → AstraFlow</div>
-<div class="code-fix">
-
-```js
-// web/draft.js: the browser only knows /chat
-await fetch("/chat", {
-  method: "POST",
-  headers,
-  body: JSON.stringify({ text, draft: readDraft() }),
-});
-// src/routes.ts: the Worker reads the secret
-apiKey: env.ASTRAFLOW_API_KEY,
-```
-
-```bash
-npx wrangler secret put ASTRAFLOW_API_KEY  # prod
-# local dev reads .dev.vars, which git ignores
-```
-
-</div>
-</div>
-</div>
-</div>
-
-<!--
-Ask someone to open DevTools and read the header out loud. That usually lands the point.
-
-The fix is moving the call, not hiding the key better.
-
-Browser calls /chat. Worker holds the key as a secret.
--->
-
----
-
-<Eyebrow>Fix it together · <span class="bug-num">Bug 3</span></Eyebrow>
-
-# Wrong model id, AstraFlow says 400
-
-<div class="bug-grid">
-<div class="bug-side">
-  <div class="row"><span class="k sym">Symptom</span><span class="v">The feature is down for everyone. AstraFlow answers HTTP <code>400</code> with <code>param_error</code>.</span></div>
-  <div class="row" v-click><span class="k hint">Hint</span><span class="v">Model ids are exact strings. Ask the API which ones exist.</span></div>
-  <div class="row" v-click><span class="k fix">Fix</span><span class="v">Use <code>deepseek-v4.1-flash</code>, or set <code>ASTRAFLOW_MODEL</code> to an id from <code>/v1/models</code>.</span></div>
-</div>
-<div>
-<div class="code-tag bug">buggy · src/agent/phrase.ts</div>
-<div class="code-bug">
-
-```ts {2}
-body: JSON.stringify({
-  model: "deepseek-ai/DeepSeek-V3",
-  messages: payload.messages,
-}),
-```
-
-</div>
-<div v-click="2">
-<div class="code-tag fix">fixed</div>
-<div class="code-fix">
+<div class="code-tag neutral">src/routes.ts · web/draft.js</div>
 
 ```ts
-export const defaultAstraFlowModel = "deepseek-v4.1-flash";
-
-function resolvedModel(model: string | undefined): string {
-  const override = model?.trim();
-  return override ? override : defaultAstraFlowModel;
-}
+apiKey: env.ASTRAFLOW_API_KEY,     // routes.ts, the Worker holds it
+await fetch("/chat", { method: "POST", /* ... */ }); // draft.js
 ```
 
-</div>
-<div class="code-tag neutral">check what exists</div>
-
-```bash
-curl -s https://api-sg.umodelverse.ai/v1/models \
-  -H "Authorization: Bearer $ASTRAFLOW_API_KEY" | jq -r '.data[].id'
-```
-
-</div>
 </div>
 </div>
 
 <!--
-"deepseek-ai/DeepSeek-V3" looks right. It's not an id on this endpoint.
+These three were bugs in an early draft of the starter. They ship fixed now, so read them instead.
 
-Run the /v1/models curl together. Read the list.
+Ask the room: in your own project, does the browser ever hold the key? Open DevTools and check.
 
-Model id is config, not a guess. Default lives in one constant.
+The ASTRAFLOW_MODEL=nope test is a good setup for Bug 2. Right now the customer sees an error. After Bug 2, they get the template answer.
+
+In production the key is a Worker secret: npx wrangler secret put ASTRAFLOW_API_KEY. Don't run it today.
 -->
 
 ---
@@ -903,7 +794,7 @@ Model id is config, not a guess. Default lives in one constant.
 <div>
 
 <Step n="1">Pick an id from <code>/v1/models</code>.</Step>
-<Step n="2">Set <code>ASTRAFLOW_MODEL</code> in <code>.dev.vars</code>. In production, a Worker var or secret.</Step>
+<Step n="2">Set <code>ASTRAFLOW_MODEL</code> in <code>.dev.vars</code>. In production, a Worker var.</Step>
 <Step n="3" tone="warn">Update the price table too.</Step>
 
 <div class="card tint mt-4" v-click>
@@ -917,10 +808,11 @@ Skip it and `/admin` shows the cost of the old model.
 </div>
 </div>
 <div>
-<div class="code-tag neutral">.dev.vars</div>
 
-```ini
-ASTRAFLOW_MODEL=your-new-model-id
+```bash
+curl -s https://api-sg.umodelverse.ai/v1/models \
+  -H "Authorization: Bearer $ASTRAFLOW_API_KEY" \
+  | jq -r '.data[].id'
 ```
 
 <div class="code-tag neutral">src/workshop/token-usage.ts</div>
@@ -948,22 +840,24 @@ Switching is easy. That's the trap.
 The model string changes in one place. The money math lives somewhere else.
 
 Peak windows are in UTC in the code. In WIB that's 08 to 11 and 13 to 17.
+
+Same for ASTRAFLOW_THINKING. Turning it on is one line, and about 5x the tokens.
 -->
 
 ---
 class: section-slide
 ---
 
-<Eyebrow>Fix it together · Part 2</Eyebrow>
+<Eyebrow>Fix it together · Part 2 · 20 min</Eyebrow>
 
 # Make it priceable.
 
 <p class="lede mt-2">A company won't buy what you can't price.</p>
 
 <div class="mt-6" style="max-width:36rem">
-<Step n="4" v-click>token usage</Step>
-<Step n="5" v-click>cost math</Step>
-<Step n="6" v-click>the credit gate</Step>
+<Step n="·" v-click>tokens become credits (works, read it)</Step>
+<Step n="1" v-click>cost math (Bug 1)</Step>
+<Step n="·" v-click>your price and your margin</Step>
 </div>
 
 <!--
@@ -974,275 +868,234 @@ About 20 minutes, including the margin talk.
 
 ---
 
-<Eyebrow>Fix it together · <span class="bug-num">Bug 4</span></Eyebrow>
+<Eyebrow>Part 2 · read it</Eyebrow>
 
-# Token usage is never read
+# Tokens become credits
 
-<div class="bug-grid">
-<div class="bug-side">
-  <div class="row"><span class="k sym">Symptom</span><span class="v">You can't tell a customer what they used. <code>/admin</code> shows 0 tokens, even after 20 chats.</span></div>
-  <div class="row" v-click><span class="k hint">Hint</span><span class="v">AstraFlow returns <code>usage</code> in snake_case, same as OpenAI.</span></div>
-  <div class="row" v-click><span class="k fix">Fix</span><span class="v">Read <code>prompt_tokens</code>, <code>completion_tokens</code>, <code>total_tokens</code>.</span></div>
-  <div class="mt-4" v-after>
-  <div class="code-tag neutral">the response field, example numbers</div>
+<div class="grid grid-cols-[0.85fr_1.15fr] gap-6 mt-1">
+<div>
+<Step n="1" v-click>Read <code>usage</code> from the reply. Same snake_case as OpenAI.</Step>
+<Step n="2" v-click tone="warn">Under 2 credits? HTTP <code>402</code>, and no model call.</Step>
+<Step n="3" v-click tone="ok">After the call, charge the real total. One ledger row per change.</Step>
+<div class="card surface small mt-3" v-click>
+One answer is about 135 tokens, so about 0.1 credit.<br/>
+Why a 2-credit gate then? Because the next reply can be bigger than what's left.
+</div>
+</div>
+<div>
+<div class="code-tag neutral">src/workshop/token-usage.ts</div>
 
-```jsonc
-"usage": {
-  "prompt_tokens": 180,
-  "completion_tokens": 60,
-  "total_tokens": 240
+```ts
+promptTokens: numberField(record, "prompt_tokens"),
+completionTokens: numberField(record, "completion_tokens"),
+totalTokens: numberField(record, "total_tokens"),
+```
+
+<div class="code-tag neutral">src/workshop/charge-credits.ts</div>
+
+```ts
+export function passesCreditGate(
+  balanceTokens: number,
+): boolean {
+  return balanceTokens >= GATE_TOKENS; // 2 credits
 }
 ```
 
-  </div>
-</div>
-<div>
-<div class="code-tag bug">buggy · src/workshop/token-usage.ts</div>
-<div class="code-bug">
+<div class="code-tag neutral">src/workshop/credit-price.ts</div>
 
-```ts {3-5}
-const record = usage as Record<string, unknown>;
-return {
-  promptTokens: numberField(record, "promptTokens"),
-  completionTokens: numberField(record, "completionTokens"),
-  totalTokens: numberField(record, "totalTokens"),
-};
+```ts
+export const CREDIT_PRICE_IDR = 100;
+export const TOKENS_PER_CREDIT = 1_000;
+export const GATE_TOKENS = 2 * TOKENS_PER_CREDIT;
 ```
 
-</div>
-<div v-click="2">
-<div class="code-tag fix">fixed</div>
-<div class="code-fix">
-
-```ts {3-5}
-const record = usage as Record<string, unknown>;
-return {
-  promptTokens: numberField(record, "prompt_tokens"),
-  completionTokens: numberField(record, "completion_tokens"),
-  totalTokens: numberField(record, "total_tokens"),
-};
-```
-
-</div>
-</div>
 </div>
 </div>
 
 <!--
-No error here. That's what makes it nasty. Everything looks fine, the numbers are just zero.
+This all works on workshop-broken. Read it with me.
 
-numberField returns 0 when the key is missing. So a wrong key name fails silently.
+numberField returns 0 when a key is missing. So a wrong key name would fail silently and /admin would show 0 tokens. Worth knowing when you write your own.
 
-After the fix, send 3 questions and refresh /admin.
+Demo: open /admin, make a tenant with 2 credits, ask twice. The second ask gets 402 and AstraFlow is never called.
+
+CREDIT_PRICE_IDR is marked as a workshop exercise. Change the price if you want. Leave the gate alone.
 -->
 
 ---
 
-<Eyebrow>Fix it together · <span class="bug-num">Bug 5</span></Eyebrow>
+<Eyebrow>Fix it together · <span class="bug-num">Bug 1</span></Eyebrow>
 
 # The cost math is off
 
 <div class="bug-grid">
 <div class="bug-side">
-  <div class="row"><span class="k sym">Symptom</span><span class="v">Your cost looks 1,000x too high, so you price yourself out. Or rates are swapped and you under-charge.</span></div>
-  <div class="row" v-click><span class="k hint">Hint</span><span class="v">Prices are per <b>1M</b> tokens. Output costs 4x input.</span></div>
-  <div class="row" v-click><span class="k fix">Fix</span><span class="v">Divide by <code>1_000_000</code> and use the right rate for each side.</span></div>
+  <div class="row"><span class="k sym">Symptom</span><span class="v"><code>cost:estimate</code> says 1,000 chats cost about $26. You price yourself out of the deal.</span></div>
+  <div class="row" v-click><span class="k hint">Hint</span><span class="v">Prices are per <b>1M</b> tokens. Output costs 4x input. Peak costs 2x.</span></div>
+  <div class="row" v-click><span class="k fix">Fix</span><span class="v">Divide by <code>1_000_000</code>, right rate on each side, double at peak. Same fix in <code>perCallUsd</code>.</span></div>
   <div class="mt-3" v-click>
 
-```bash
-npm run cost:estimate
-```
-
   <table class="proj">
-  <thead><tr><th>chats / month</th><th>USD</th><th>IDR</th></tr></thead>
+  <thead><tr><th>chats / month</th><th>before</th><th>after</th><th>after, peak</th></tr></thead>
   <tbody>
-  <tr><td>1,000</td><td>$0.024</td><td>Rp396</td></tr>
-  <tr><td>10,000</td><td>$0.24</td><td>Rp3,964</td></tr>
-  <tr><td>100,000</td><td>$2.40</td><td>Rp39,640</td></tr>
+  <tr><td>1,000</td><td>$25.80</td><td>$0.0131</td><td>$0.0262</td></tr>
+  <tr><td>10,000</td><td>$257.97</td><td>$0.1310</td><td>$0.2620</td></tr>
+  <tr><td>100,000</td><td>$2,579.72</td><td>$1.31</td><td>$2.62</td></tr>
   </tbody>
   </table>
-  <p class="tiny muted">Labelled example from the script: 180 + 60 tokens, 40% of chats hit the model, off-peak. Your numbers come from your local D1.</p>
+  <p class="tiny muted">Real <code>npm run cost:estimate</code> output, labelled example: 105 + 31 tokens, 40% of chats call the model.</p>
   </div>
 </div>
 <div>
-<div class="code-tag bug">buggy · src/workshop/token-usage.ts</div>
+<div class="code-tag bug">workshop-broken · src/workshop/token-usage.ts</div>
 <div class="code-bug">
 
-```ts {2-3}
+```ts {1-4}
+const rate = isPeak ? modelPrice.offPeak : modelPrice.offPeak;
 const usd =
-  (promptTokens / 1_000) * rate.outputPerMillionUsd +
-  (completionTokens / 1_000) * rate.inputPerMillionUsd;
+  (usage.promptTokens / 1_000) * rate.outputPerMillionUsd +
+  (usage.completionTokens / 1_000) * rate.inputPerMillionUsd;
 ```
 
 </div>
 <div v-click="2">
-<div class="code-tag fix">fixed</div>
+<div class="code-tag fix">fixed · from main</div>
 <div class="code-fix">
 
-```ts {3-4}
-const rate = isPeakUtc(now) ? modelPrice.peak : modelPrice.offPeak;
+```ts {1,4-6}
+const multiplier = isPeak ? 2 : 1;
+const rate = modelPrice.offPeak;
 const usd =
-  (promptTokens / 1_000_000) * rate.inputPerMillionUsd +
-  (completionTokens / 1_000_000) * rate.outputPerMillionUsd;
-const estCostUsd = Math.round(usd * 1e8) / 1e8;
-const estCostIdr = Math.round(estCostUsd * modelPrice.idrPerUsd);
+  ((usage.promptTokens / 1_000_000) * rate.inputPerMillionUsd +
+    (usage.completionTokens / 1_000_000) * rate.outputPerMillionUsd) *
+  multiplier;
 ```
 
 </div>
+<p class="tiny muted mt-1">Then <code>perCallUsd</code> in <code>cost-projection.ts</code>: same divisor, same swap. Main has an older projection, so that half is the fix the tests ask for.</p>
 </div>
 </div>
 </div>
 
 <style>
 .proj { width: 100%; margin-top: 0.3rem; }
-.proj td, .proj th { padding: 0.2rem 0.45rem !important; font-size: 0.78rem; }
+.proj td, .proj th { padding: 0.2rem 0.45rem !important; font-size: 0.76rem; }
 .proj td:nth-child(n+2) { font-family: 'JetBrains Mono', monospace; }
 </style>
 
 <!--
-Two mistakes in three lines. Wrong divisor, swapped rates.
+Three mistakes in four lines. Peak never applies, wrong divisor, swapped rates.
 
-Then run npm run cost:estimate. If your D1 has answered chats, it uses your real average. If not, it prints the labelled example.
+Run npm run cost:estimate before and after. The before column is what I got on a fresh clone. About 2,000x too high.
 
-Point out: refusals and handoffs don't call the model, so they're free. That's why only 40% count in the example.
+Tests that go green: admin-credits, workshop token usage, cost projection.
+
+If your D1 has answered chats, cost:estimate uses your real average. On a fresh clone it prints the labelled example.
+
+Refusals and handoffs don't call the model, so they're free. That's why only 40% count.
 -->
 
 ---
-zoom: 0.94
----
 
-<Eyebrow>Fix it together · <span class="bug-num">Bug 6</span></Eyebrow>
+<Eyebrow>Part 2 · your price</Eyebrow>
 
-# The credit limit can be bypassed
+# Now, the margin
 
-<div class="bug-grid">
-<div class="bug-side">
-  <div class="row"><span class="k sym">Symptom</span><span class="v">Credits run out, model calls keep going. You pay for usage nobody pays you for.</span></div>
-  <div class="row" v-click><span class="k hint">Hint</span><span class="v">One call can cost more than what's left. So the gate is 2 credits.</span></div>
-  <div class="row" v-click><span class="k fix">Fix</span><span class="v">Check <code>&gt;= GATE_TOKENS</code>. Short? HTTP <code>402</code>, no model call.</span></div>
-  <div class="card tint mt-3" v-click>
-  <h3>Now, pricing</h3>
+<div class="grid grid-cols-[1fr_1fr] gap-7 mt-2">
+<div>
 
 ```txt
-CREDIT_PRICE_IDR  = 100   // Rp100
-TOKENS_PER_CREDIT = 1000
-GATE_TOKENS       = 2000  // 2 credits
-
-price = total_tokens / 1000 × Rp100
-cost  = from Bug 5, in IDR
-margin = ?  we work it out live
+one answer   ≈ 105 prompt + 31 completion tokens
+price        = total_tokens / 1,000 × Rp100
+cost         = from Bug 1, in IDR, off-peak or peak
+margin       = price − cost   ← we work it out live
 ```
 
-  </div>
+<p class="small muted mt-2">IDR uses the workshop rate, 16,500 per USD. Not a live FX quote.</p>
+
 </div>
 <div>
-<div class="code-tag bug">buggy · src/workshop/charge-credits.ts</div>
-<div class="code-bug">
-
-```ts {4}
-export function passesCreditGate(
-  balanceTokens: number,
-): boolean {
-  return balanceTokens > 0;
-}
-```
-
-</div>
-<div v-click="2">
-<div class="code-tag fix">fixed</div>
-<div class="code-fix">
-
-```ts {4}
-export function passesCreditGate(
-  balanceTokens: number,
-): boolean {
-  return balanceTokens >= GATE_TOKENS;
-}
-```
-
-```ts
-// src/routes.ts
-const status = result.outcome === "402" ? 402 : 200;
-```
-
-</div>
-</div>
+<Step n="1" v-click>Open <code>/admin</code>. Read your real tokens per chat.</Step>
+<Step n="2" v-click>Price it at Rp100 per credit. Is that cheap for a company?</Step>
+<Step n="3" v-click tone="warn">Now turn thinking on. Same price, about 5x the tokens. Still OK?</Step>
+<p class="lede mt-4" v-click>Know your cost per request<br/>before you quote a price.</p>
 </div>
 </div>
 
 <!--
-"> 0" sounds fine. But a call with 1 token of balance still runs, and the tenant goes into overdraft.
+Don't give the answer. Ask the room.
 
-The gate is 2 credits, 2,000 tokens, because one reply can be bigger than what's left.
+Take tokens per chat from /admin, price it at Rp100 per 1,000 tokens, compare with the fixed cost from Bug 1. Write the numbers live.
 
-Pricing: don't give the answer. Ask the room. Take the tokens per chat from /admin, price it at Rp100 per 1,000 tokens, compare with the cost from Bug 5. Write the numbers live.
+Then the thinking question. Same model, one variable, a very different margin.
 -->
 
 ---
 class: section-slide
 ---
 
-<Eyebrow>Fix it together · Part 3</Eyebrow>
+<Eyebrow>Fix it together · Part 3 · 20 min</Eyebrow>
 
 # Make it trustworthy.
 
 <p class="lede mt-2">Enterprise trust is errors, grounding, and humans in control.</p>
 
 <div class="mt-6" style="max-width:36rem">
-<Step n="7" v-click>when AstraFlow fails</Step>
-<Step n="8" v-click>made-up prices and lost complaints</Step>
+<Step n="2" v-click>when AstraFlow has a bad minute</Step>
+<Step n="3" v-click>what the model is allowed to see</Step>
+<Step n="·" v-click>a human gets the complaints (works, read it)</Step>
 </div>
 
 <!--
 Last part. What happens when things go wrong, and who decides.
 
-About 15 minutes. Early finishers move to the bonus.
+About 20 minutes. Early finishers move to the bonus.
 -->
 
 ---
 
-<Eyebrow>Fix it together · <span class="bug-num">Bug 7</span></Eyebrow>
+<Eyebrow>Fix it together · <span class="bug-num">Bug 2</span></Eyebrow>
 
 # AstraFlow has a bad minute, so do we
 
 <div class="bug-grid">
 <div class="bug-side">
-  <div class="row"><span class="k sym">Symptom</span><span class="v">AstraFlow has a <code>429</code> or <code>5xx</code>, and your customer sees a crash, not an answer.</span></div>
-  <div class="row" v-click><span class="k hint">Hint</span><span class="v"><code>fetch</code> doesn't throw on 4xx or 5xx. You have to check.</span></div>
-  <div class="row" v-click><span class="k fix">Fix</span><span class="v">Check <code>response.ok</code>. Add a timeout. Reply with something friendly.</span></div>
-  <div class="card surface small mt-3" v-after>
-  Want an answer anyway?<br/><code>phraseFromFacts(facts, language)</code> writes the same sentence from a template. No model, no cost.
-  </div>
+  <div class="row"><span class="k sym">Symptom</span><span class="v">A <code>429</code>, a <code>5xx</code> or a hung call, and your customer gets an error instead of a price you already have.</span></div>
+  <div class="row" v-click><span class="k hint">Hint</span><span class="v"><code>fetch</code> doesn't throw on 4xx or 5xx. And <code>wordingTimeoutMs</code> is exported but never used.</span></div>
+  <div class="row" v-click><span class="k fix">Fix</span><span class="v">Check <code>response.ok</code>, add the 25-second timeout. On failure, answer from the template. No tokens, no charge.</span></div>
+  <p class="small muted mt-3" v-after>The log keeps <code>wording_fallback</code> and the upstream class, like <code>param_error</code> or <code>timeout</code>. ADR 0014.</p>
 </div>
 <div>
-<div class="code-tag bug">buggy · src/agent/phrase.ts</div>
+<div class="code-tag bug">workshop-broken · src/agent/phrase.ts</div>
 <div class="code-bug">
 
 ```ts
-const response = await fetchImpl(url, init);
-const body = await response.json();
-const reply = completionText(body)!;
+const response = await fetchImpl(url, { method, headers, body });
+const body: unknown = await response.json();
+const reply = completionText(body);
+if (!reply) throw new Error("wording unavailable");
 ```
 
 </div>
 <div v-click="2">
-<div class="code-tag fix">fixed</div>
+<div class="code-tag fix">intended fix · passes the starter's tests</div>
 <div class="code-fix">
 
-```ts {3,5-7}
-const response = await fetchImpl(url, {
-  ...init,
-  signal: AbortSignal.timeout(8_000),
+```ts
+response = await fetchImpl(url, {
+  method, headers, body,
+  signal: AbortSignal.timeout(options.timeoutMs ?? wordingTimeoutMs),
 });
-if (!response.ok) {
-  throw await wordingFailure(response); // keeps http_429
-}
+if (!response.ok) throw await wordingFailure(response); // keeps the class
 ```
 
 ```ts
-// src/agent/handle-request.ts: friendly reply, no crash
+// src/agent/handle-request.ts
 } catch (error) {
-  return finish({ reply: replies[language].wording, /* ... */ });
+  wording = "fallback";
+  wordingErrorClass = "wording_fallback";
+  phrased = { reply: phraseFromFacts(selected, language),
+    calledAstra: false, usage: zeroUsage(), payload };
 }
 ```
 
@@ -1256,87 +1109,61 @@ Every upstream fails sometimes. Rate limit, a bad deploy, a slow minute.
 
 fetch only throws on network errors. A 429 is a normal response.
 
-The timeout line is something we add today. Pick a number that fits your UX.
+The point of ADR 0014: we already have the price from the table. A gateway fault is not the customer's problem. Answer from the template, keep the citation, don't charge.
 
-Fallback idea: the template phraser already exists. Same facts, no model.
+main doesn't have this fix yet. This version turns the red handle-request and workshop tests green.
+
+Demo: ASTRAFLOW_MODEL=nope from Part 1. Before, an error. After, the template answer and wording "fallback".
 -->
 
 ---
-zoom: 0.9
+zoom: 0.95
 ---
 
-<Eyebrow>Fix it together · <span class="bug-num">Bug 8</span></Eyebrow>
+<Eyebrow>Fix it together · <span class="bug-num">Bug 3</span></Eyebrow>
 
-# Made-up prices, and complaints that go nowhere
+# The model sees the customer's raw message
 
-<div class="grid grid-cols-2 gap-5">
+<div class="bug-grid">
 <div class="bug-side">
-  <div class="row"><span class="k sym">Symptom</span><span class="v">A customer acts on a price that was never published. The model said "today's price is..." with a number not in the table.</span></div>
-  <div class="row" v-click="1"><span class="k fix">Fix</span><span class="v">Send only the facts JSON. Strict prompt. No raw message.</span></div>
-</div>
-<div class="bug-side">
-  <div class="row"><span class="k sym">Symptom</span><span class="v">A customer reports a wrong price and nobody hears about it. "Di pasar Rp80.000, kok beda?" never reaches <code>/admin</code>.</span></div>
-  <div class="row" v-click="2"><span class="k fix">Fix</span><span class="v">Code writes the handoff row. No model call on this path.</span></div>
-</div>
-</div>
-
-<div class="grid grid-cols-2 gap-5 mt-1">
-<div>
-<div class="code-tag bug">buggy · grounding</div>
-<div class="code-bug">
-
-```ts
-messages: [
-  { role: "system", content: "You are a helpful assistant." },
-  { role: "user", content: rawText },
-],
-```
-
-</div>
-<div v-click="1">
-<div class="code-tag fix">fixed · src/agent/phrase.ts</div>
-<div class="code-fix">
-
-```ts
-const englishPrompt =
-  "Write one English sentence using only the " +
-  "price facts given. Name the trading date. " +
-  "Do not call it today's price. Do not add " +
-  "numbers. Do not add a source line.";
-// user message: the facts JSON, nothing else
-const user = JSON.stringify(wordingFacts(facts));
-```
-
-</div>
-</div>
+  <div class="row"><span class="k sym">Symptom</span><span class="v">"Nama saya Budi, telepon 0812..." goes straight to the model. Plus a vague prompt that can invent a price.</span></div>
+  <div class="row" v-click><span class="k hint">Hint</span><span class="v">The facts are already resolved. What does the model actually need?</span></div>
+  <div class="row" v-click><span class="k fix">Fix</span><span class="v">Send only the facts JSON. A strict prompt per language, with an Rp example.</span></div>
+  <div class="card tint small mt-3" v-after>This one also turns <code>npm run test:exercise</code> green. No name, no phone, no raw text in the payload.</div>
 </div>
 <div>
-<div class="code-tag bug">buggy · handoff</div>
+<div class="code-tag bug">workshop-broken · src/agent/phrase.ts</div>
 <div class="code-bug">
 
-```ts
-if (resolved.type === "claim") {
-  // tells the customer "we'll review it"...
-  return finish({ reply, outcome: "handoff" });
-}  // ...but no row is ever written
+```ts {3-4}
+export function buildWordingPayload(_facts, rawText) {
+  return { messages: [
+    { role: "system", content: "You are a helpful assistant." },
+    { role: "user", content: rawText },
+  ] };
+}
 ```
 
 </div>
 <div v-click="2">
-<div class="code-tag fix">fixed · src/agent/handle-request.ts</div>
+<div class="code-tag fix">intended fix · passes the starter's tests</div>
 <div class="code-fix">
 
-```ts {5-10}
-if (resolved.type === "claim") {
-  const filled = await fillClaim(
-    resolved, input.readTable,
-  );
-  await input.writeHandoff({
-    commodity: filled.commodity,
-    province: filled.province ?? "tidak disebut",
-    displayedPrice: filled.displayedPrice ?? 0,
-    claimedPrice: resolved.claimedPrice,
-  });
+```ts {3,5}
+export function buildWordingPayload(facts, rawText) {
+  const language = replyLanguage(rawText); // only picks the language
+  const system = language === "en" ? englishPrompt : indonesianPrompt;
+  return { messages: [{ role: "system", content: system },
+    { role: "user", content: JSON.stringify(wordingFacts(facts)) }] };
+}
+```
+
+```ts
+const englishPrompt =
+  "Write one sentence in English using only the price facts " +
+  "given. Name the trading date. Write prices with the Rp " +
+  "prefix, for example Rp15,600. Do not call it today's " +
+  "price. Do not add numbers. Do not add a source line.";
 ```
 
 </div>
@@ -1345,50 +1172,79 @@ if (resolved.type === "claim") {
 </div>
 
 <!--
-Two bugs, one theme: who is in control.
+Two problems, one fix. Privacy and grounding.
 
-Grounding: the model only sees the facts. The prompt says name the trading date, never say today's price, never add numbers.
+The raw text only decides the reply language. It never leaves the Worker.
 
-Handoff: the buggy version says "we'll review it" but never writes the row. That's lying to the customer.
+The user message becomes something like {"komoditas":"Beras","tanggal":"2026-10-05","satuan":"kg","baris":{...}}.
 
-After the fix, send the complaint and open /admin. The row is there.
+The tests check for an Rp example in both styles: Rp15.600 in the Indonesian prompt, Rp15,600 in the English one.
+
+main has an older prompt without the Rp example. This version passes the starter's tests. Your wording can differ, as long as the tests pass.
+-->
+
+---
+
+<Eyebrow>Part 3 · read it</Eyebrow>
+
+# Two guards that already work
+
+<div class="grid grid-cols-2 gap-6 mt-1">
+<div class="card">
+<span class="pill ok">wording check</span>
+
+### The model drops the price? Code notices.
+
+```ts
+// src/agent/check-wording.ts
+wordingKeepsFacts(reply, facts)
+// every price with Rp, and the trading date
+```
+
+<p class="small">Fails the check? The template answer replaces it. Tokens were used, so they're charged. Log says <code>wording_rejected</code>.</p>
+</div>
+<div class="card">
+<span class="pill blue">handoff</span>
+
+### A complaint reaches a person
+
+```ts
+// src/agent/handle-request.ts
+await input.writeHandoff({ commodity, province,
+  displayedPrice, claimedPrice });
+```
+
+<p class="small">"Harga beras di Jawa Barat harusnya Rp9.000" writes a row in <code>/admin</code>. No model call on this path.</p>
+</div>
+</div>
+
+<p class="lede mt-4" v-click>Every <code>/chat</code> reply says which wording path ran.<br/><code>astra</code>, <code>rejected</code>, <code>fallback</code>, or <code>none</code>.</p>
+
+<!--
+Both of these ship working on workshop-broken. Read them.
+
+The wording check is the second half of ADR 0014. The model sentence must keep every price with Rp and the trading date. If not, the template wins.
+
+Handoff demo: send the complaint, open /admin, the row is there.
+
+The wording field in the /chat reply tells you which path ran. none means no model call at all, like a refusal, a claim, or a 402.
 -->
 
 ---
 
 <Eyebrow>Bonus · early finishers</Eyebrow>
 
-# Done early? Two more.
+# Done early? Write your own guardrail.
 
-<div class="grid grid-cols-2 gap-6 mt-1">
-<div class="card">
-<span class="pill">exercise</span>
-
-### The identity gate
-
-A name and a phone must stay out of the AstraFlow payload, the log, and storage.
-
-```ts
-// test/exercise/identity-gate.test.ts
-const text =
-  "Berapa harga beras di Aceh? " +
-  "Nama saya Budi, telepon 081234567890";
-// ...
-expect(payload).not.toContain("Budi");
-expect(payload).not.toContain("081234567890");
-```
-
-<p class="small muted" v-click>Hint: look at <code>buildWordingPayload</code>. Where does <code>rawText</code> go?</p>
-</div>
+<div class="grid grid-cols-[1.1fr_0.9fr] gap-6 mt-1">
 <div class="card">
 <span class="pill blue">your rule</span>
 
-### One more guardrail
+### `src/agent/extra-guardrail.ts`
 
 An empty stub. Return a refusal to stop before any price read or model call.
 
 ```ts
-// src/agent/extra-guardrail.ts
 export function extraGuardrail(
   _normalized: string,
   _language: ReplyLanguage,
@@ -1399,14 +1255,20 @@ export function extraGuardrail(
 
 <p class="small muted" v-click>Ideas: block a topic you don't serve. Bilingual, please.</p>
 </div>
+<div>
+<Step n="1" v-click>Pick one thing a real customer would abuse.</Step>
+<Step n="2" v-click>Write the refusal in Indonesian and English.</Step>
+<Step n="3" v-click tone="ok">Add a test in <code>test/exercise/</code>, next to the identity gate.</Step>
+<p class="small muted mt-3" v-click>A refusal never calls AstraFlow, so it's free.</p>
+</div>
 </div>
 
 <!--
 For people who finish early. The rest keep fixing.
 
-Identity gate: run npm run test:exercise. Green means done.
+No test for this one. Your rule, your test.
 
-Extra guardrail: anything you think a real customer would abuse. Keep it bilingual, Indonesian and English.
+Keep it bilingual, Indonesian and English, because the reply language follows the question.
 -->
 
 ---
@@ -1418,10 +1280,10 @@ Extra guardrail: anything you think a real customer would abuse. Keep it bilingu
 <table class="tie mt-2">
 <thead><tr><th>The company asks</th><th>What answered it today</th></tr></thead>
 <tbody>
-<tr v-click><td><b>Is it correct?</b></td><td>Code fetches the price through MCP. The model only words the facts. Bug 8.</td></tr>
-<tr v-click><td><b>What does one request cost?</b></td><td>Read <code>usage</code>, do the math right, gate on credits. Bugs 4 to 6.</td></tr>
-<tr v-click><td><b>Where does our data go?</b></td><td>Key on the server. Facts in the payload, not names. Content-free logs. Bug 2 and the bonus.</td></tr>
-<tr v-click><td><b>Who's accountable when it's wrong?</b></td><td>Complaints become a handoff in <code>/admin</code>. A person decides. Bug 8.</td></tr>
+<tr v-click><td><b>Is it correct?</b></td><td>Code fetches the price through MCP. The model sees only the facts, and code checks its sentence. Bug 3.</td></tr>
+<tr v-click><td><b>What does one request cost?</b></td><td>Read <code>usage</code>, do the cost math right, gate on credits. Bug 1.</td></tr>
+<tr v-click><td><b>Where does our data go?</b></td><td>Key on the server. Facts in the payload, not names or phones. Content-free logs. Bug 3.</td></tr>
+<tr v-click><td><b>Who's accountable when it's wrong?</b></td><td>Complaints become a handoff in <code>/admin</code>. A bad gateway minute still gets an honest answer. Bug 2.</td></tr>
 </tbody>
 </table>
 
@@ -1436,7 +1298,7 @@ Extra guardrail: anything you think a real customer would abuse. Keep it bilingu
 <!--
 Close the loop with the opening slide.
 
-Each question maps to bugs we just fixed. Point at them one by one.
+Each question maps to a bug we just fixed, or code we read. Point at them one by one.
 
 That's the difference between a demo and something a company pays for.
 -->
@@ -1546,13 +1408,12 @@ layout: thanks
 
 <div style="font-size:3.6rem;font-weight:800;letter-spacing:-0.04em;line-height:1">Thank you.</div>
 
-<div class="flex gap-10 mt-8">
-  <!-- TODO: swap in the real starter repo URL and regenerate this QR (public/qr/*.png) -->
-  <Qr src="/qr/luma.png" label="Event page" url="luma.com/c0socj8g" :size="128" />
-  <Qr src="/qr/cs-ai.png" label="CS AI helper" url="monitor-pangan-support.naufaldi-rafif.workers.dev" :size="128" />
-  <Qr src="/qr/monitor-pangan.png" label="Monitor Pangan" url="monitor.naufaldi.com" :size="128" />
+<div class="flex gap-8 mt-8">
+  <Qr src="/qr/luma.png" label="Event page" url="luma.com/c0socj8g" :size="124" />
+  <Qr src="/qr/starter.png" label="Starter repo" url="github.com/naufaldi/astra-cs" :size="124" />
+  <Qr src="/qr/cs-ai.png" label="CS AI helper" url="monitor-pangan-support…workers.dev" :size="124" />
+  <Qr src="/qr/monitor-pangan.png" label="Monitor Pangan" url="monitor.naufaldi.com" :size="124" />
 </div>
-<div class="mt-4"><div class="ph-note">QR / link placeholder, real repo link coming</div></div>
 
 <div class="flex items-center gap-4 mt-8">
   <span style="font-family:'JetBrains Mono',monospace;font-size:0.85rem">Find me <b style="color:var(--af-primary)">@F2aldi</b></span>
@@ -1567,6 +1428,4 @@ layout: thanks
 Thank people for staying the full two hours.
 
 Leave this slide up during the last questions so people can scan the QR codes.
-
-TODO before the event: swap in the real starter repo URL and regenerate the QR codes.
 -->
