@@ -183,3 +183,7 @@ table { font-size: 0.85rem; }
 .slidev-layout.section-slide h1 { font-size: 2.6rem; margin-top: 2.2rem; }
 .slidev-layout.section-slide .af-step-body { font-size: 1.25rem; }
 .slidev-layout.section-slide .af-step-n { flex-basis: 2rem; height: 2rem; font-size: 0.9rem; }
+
+/* Verbatim code with long lines: wrap instead of overflowing. */
+.code-wrap pre.shiki, .code-wrap pre.shiki code { white-space: pre-wrap !important; overflow-wrap: anywhere; }
+.code-sm pre.shiki, .code-sm .slidev-code { font-size: 0.64rem !important; line-height: 1.45 !important; }
